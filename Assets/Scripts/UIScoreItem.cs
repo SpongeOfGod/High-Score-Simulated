@@ -14,12 +14,6 @@ public class UIScoreItem : MonoBehaviour
 
     public int Score = 0; 
 
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
-
     public void setText(string number, string name, string score) 
     {
         nameText.text = name;
@@ -30,21 +24,9 @@ public class UIScoreItem : MonoBehaviour
             Score = scoreInt;
         }
     }
-
-    // Update is called once per frame
-    void Update()
-    {
-
-    }
-
     public void SetCurrentOrderNumber(Transform parent, int index) 
     {
         transform.SetSiblingIndex(index);
         numberText.text = (transform.GetSiblingIndex() + 1).ToString();
     }
-
-    //public int GetCurrentOrderNumber(Transform parent) 
-    //{
-    //    return transform.GetSiblingIndex();
-    //}
 }

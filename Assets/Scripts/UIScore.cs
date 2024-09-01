@@ -23,6 +23,10 @@ public class UIScore : MonoBehaviour
     [SerializeField] private Button confirmButton;
     [SerializeField] private Button clearListButton;
 
+    [Header("Animation")]
+    [SerializeField] Transform parentCanvas;
+    [SerializeField] Animator prefabTextItem;
+
     private void Awake()
     {
         confirmButton.onClick.AddListener(OnConfirmClick);
@@ -36,7 +40,7 @@ public class UIScore : MonoBehaviour
             string playerName = inputName.text;
             string playerScore = inputScore.text;
 
-            AddPlayer((parent.childCount).ToString(), playerName, playerScore);
+            TryAddPlayer((parent.childCount).ToString(), playerName, playerScore);
         } 
         else if(inputName.text != string.Empty || inputScore.text != string.Empty) 
         {
@@ -74,6 +78,17 @@ public class UIScore : MonoBehaviour
         }
     }
 
+    private void TryAddPlayer(string number, string name, string score) 
+    {
+        int.TryParse(score, out int addedScore);
+        if(addedScore > items[items.Count - 1].Score) 
+        {
+            AddPlayer(number, name, score);
+        } else 
+        {
+            Instantiate(prefabTextItem, parentCanvas);
+        }
+    }
     private void AddPlayer(string number, string name, string score) 
     {
         UIScoreItem item = Instantiate(prefabScoreItem, parent);
