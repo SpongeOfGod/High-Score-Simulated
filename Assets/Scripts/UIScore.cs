@@ -1,10 +1,6 @@
-using System.Collections;
 using System.Collections.Generic;
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.Events;
-using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 public class UIScore : MonoBehaviour
@@ -13,6 +9,7 @@ public class UIScore : MonoBehaviour
     [SerializeField] private List<UIScoreItem> items = new List<UIScoreItem>();
     [SerializeField] private UIScoreItem prefabScoreItem;
     [SerializeField] private int maxNumberOfPlayers = 10;
+    [SerializeField] private OrderWays formToOrder = new OrderWays();
 
     [Header("ParentOfScore")]
     [SerializeField] private Transform parent;
@@ -22,15 +19,29 @@ public class UIScore : MonoBehaviour
     [SerializeField] private TMP_InputField inputScore;
     [SerializeField] private Button confirmButton;
     [SerializeField] private Button clearListButton;
+    [SerializeField] private Button orderByScore;
+    [SerializeField] private Button orderByKills;
+    [SerializeField] private Button orderByAssists;
+    [SerializeField] private Button orderByDeaths;
 
     [Header("Animation")]
     [SerializeField] Transform parentCanvas;
     [SerializeField] Animator prefabTextItem;
 
+    enum OrderWays 
+    {
+        byScore, byKills, byAssists, byDeaths
+    }
+
     private void Awake()
     {
         confirmButton.onClick.AddListener(OnConfirmClick);
         clearListButton.onClick.AddListener(ResetList);
+        orderByScore.onClick.AddListener(PrepareSortScore);
+        orderByKills.onClick.AddListener(PrepareSortKills);
+        orderByAssists.onClick.AddListener(PrepareSortAssists);
+        orderByDeaths.onClick.AddListener(PrepareSortDeaths);
+        formToOrder = OrderWays.byScore;
     }
 
     private void OnConfirmClick()
@@ -59,6 +70,28 @@ public class UIScore : MonoBehaviour
         CreateFalsePlayers();
     }
 
+    private void PrepareSortKills() 
+    {
+        formToOrder = OrderWays.byKills;
+        Sorting();
+    }
+
+    private void PrepareSortAssists()
+    {
+        formToOrder = OrderWays.byAssists;
+        Sorting();
+    }
+    private void PrepareSortScore()
+    {
+        formToOrder = OrderWays.byScore;
+        Sorting();
+    }
+    private void PrepareSortDeaths()
+    {
+        formToOrder = OrderWays.byDeaths;
+        Sorting();
+    }
+
     private void OnDestroy()
     {
         confirmButton.onClick.RemoveAllListeners();
@@ -73,8 +106,13 @@ public class UIScore : MonoBehaviour
     {
         for (int i = 0; i < maxNumberOfPlayers; i++)
         {
-            string randomScore = Random.Range(1, 999).ToString();
-            AddPlayer(i.ToString(), "Player " + i, randomScore);
+            int randomKills = Random.Range(0, 10);
+            int randomDeaths = Random.Range(0, 10);
+            int randomAssists = Random.Range(0, 10);
+
+            int Score = (randomKills * 3) + randomAssists - randomDeaths;
+            Score = Mathf.Clamp(Score, 0, 999);
+            AddPlayer(i.ToString(), "Player " + i, Score, randomKills, randomAssists, randomDeaths);
         }
     }
 
@@ -83,16 +121,28 @@ public class UIScore : MonoBehaviour
         int.TryParse(score, out int addedScore);
         if(addedScore > items[items.Count - 1].Score) 
         {
-            AddPlayer(number, name, score);
+            int randomKills = Random.Range(0, 10);
+            int randomDeaths = Random.Range(0, 10);
+            int randomAssists = Random.Range(0, 10);
+            int Score = (randomKills * 3) + randomAssists - randomDeaths;
+
+            AddPlayer(number, name, Score, randomKills, randomDeaths, randomAssists);
         } else 
         {
             Instantiate(prefabTextItem, parentCanvas);
         }
     }
-    private void AddPlayer(string number, string name, string score) 
+    private void AddPlayer(string number, string name, int score, int kills, int assists, int deaths) 
     {
         UIScoreItem item = Instantiate(prefabScoreItem, parent);
-        item.setText(number, name, score);
+
+        string scoreText = score.ToString();
+        string killsText = kills.ToString();
+        string assistsText = assists.ToString();
+        string deathsText = deaths.ToString();
+
+        item.SetText(number, name, scoreText, killsText, assistsText, deathsText);
+        item.SetValues(score, kills, assists, deaths);
         items.Add(item);
 
         Sorting();
@@ -107,42 +157,67 @@ public class UIScore : MonoBehaviour
 
     private void Sorting() 
     {
-        UIScoreItem previousItem = null;
-        int indexPrev = -1;
-        bool changeInOrder = false;
-        bool listInOrder = false;
+        UIScoreItem nextItem = null;
+        int indexNext = -1;
+        int numberSorted = 0;
 
-        while (!listInOrder) 
+        while (numberSorted < items.Count) 
         {
-            for (int i = 0; i < items.Count; i++)
+            for (int i = 0; i < items.Count - numberSorted; i++)
             {
                 UIScoreItem currentItem = items[i];
-                indexPrev = i;
+                indexNext = i;
 
-                if (indexPrev - 1 >= 0)
+                if (i != items.Count - numberSorted - 1)
                 {
-                    indexPrev = indexPrev - 1;
+                    indexNext = indexNext + 1;
 
-                    previousItem = items[indexPrev];
+                    nextItem = items[indexNext];
                     currentItem = items[i];
 
-                    if (previousItem != null && previousItem.Score < currentItem.Score)
+                    switch (formToOrder)
                     {
-                        items[indexPrev] = currentItem;
-                        items[i] = previousItem;
-                        changeInOrder = true;
+                        case OrderWays.byScore:
+
+                            if (nextItem.Score > currentItem.Score)
+                            {
+                                (items[indexNext], items[i]) = (items[i], items[indexNext]);
+                            }
+                            break;
+
+                        case OrderWays.byAssists:
+
+                            if (nextItem.AssistsCount > currentItem.AssistsCount) 
+                            {
+                                (items[indexNext], items[i]) = (items[i], items[indexNext]);
+                            }
+                           break;
+
+                        case OrderWays.byKills:
+                            
+                            if(nextItem.KillsCount > currentItem.KillsCount) 
+                            {
+                                (items[indexNext], items[i]) = (items[i], items[indexNext]);
+                            }
+                            break;
+
+                        case OrderWays.byDeaths: 
+                            
+                            if(nextItem.DeathsCount < currentItem.DeathsCount) 
+                            {
+                                (items[indexNext], items[i]) = (items[i], items[indexNext]);
+                            }
+                            break;
                     }
+
+                    items[i].SetCurrentOrderNumber(parent, i);
+                    items[indexNext].SetCurrentOrderNumber(parent, indexNext);
                 }
-
-                items[i].SetCurrentOrderNumber(parent, i);
+                else
+                {
+                    numberSorted++;
+                }
             }
-
-            if (!changeInOrder) 
-            {
-                listInOrder = true;
-            }
-
-            changeInOrder = false;
         }
     }
 }
